@@ -1,0 +1,28 @@
+plugins {
+  id 'java-library'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+version = "1.18.2"
+group = 'com.github.neapovil.oauth'
+compileJava.options.encoding = 'UTF-8'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories {
+  maven { url 'https://papermc.io/repo/repository/maven-public/' }
+  mavenCentral()
+}
+
+dependencies {
+  compileOnly group: 'io.papermc.paper', name: 'paper-api', version: '1.18.2-R0.1-SNAPSHOT'
+
+  implementation group: 'com.electronwill.night-config', name:'json', version: '3.6.5'
+  implementation group: 'com.sparkjava', name: 'spark-core', version: '2.9.4'
+}
+
+shadowJar {
+  classifier ''
+}
+
+build.dependsOn shadowJar
