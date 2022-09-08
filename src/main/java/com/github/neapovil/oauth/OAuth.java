@@ -148,7 +148,7 @@ public final class OAuth extends JavaPlugin implements Listener
     }
 
     @EventHandler
-    private void AsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event)
+    private void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event)
     {
         final String ip = event.getAddress().getHostAddress();
         final UUID id = event.getUniqueId();
