@@ -27,6 +27,7 @@ public final class OAuth extends JavaPlugin implements Listener
     private String secret = "";
     private final Map<String, Auth> codes = new ConcurrentHashMap<>();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private int time = 60;
 
     @Override
     public void onEnable()
@@ -41,10 +42,7 @@ public final class OAuth extends JavaPlugin implements Listener
 
         this.saveResource("config.json", false);
 
-        this.config = FileConfig.builder(new File(this.getDataFolder(), "config.json"))
-                .autoreload()
-                .autosave()
-                .build();
+        this.config = FileConfig.builder(new File(this.getDataFolder(), "config.json")).build();
 
         this.config.load();
 
@@ -55,6 +53,7 @@ public final class OAuth extends JavaPlugin implements Listener
         }
 
         this.secret = this.config.get("secret");
+        this.time = this.config.getInt("time");
 
         final int port = this.config.getInt("port");
 
@@ -158,7 +157,7 @@ public final class OAuth extends JavaPlugin implements Listener
         {
             final int code = this.generateCode();
 
-            this.codes.put(ip, new Auth(code, Instant.now().plusSeconds(60), ip, id, event.getName()));
+            this.codes.put(ip, new Auth(code, Instant.now().plusSeconds(this.time), ip, id, event.getName()));
 
             event.disallow(Result.KICK_OTHER, Component.text(this.formatCode(code)));
 
