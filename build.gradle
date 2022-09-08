@@ -3,7 +3,7 @@ plugins {
   id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
-version = "1.18.2"
+version = '1.18.2'
 group = 'com.github.neapovil.oauth'
 compileJava.options.encoding = 'UTF-8'
 
