@@ -1,5 +1,6 @@
 {
   "secret": "",
   "port": 4567,
-  "time": 60
+  "time": 60,
+  "message": "You have <time> seconds to login"
 }

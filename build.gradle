@@ -16,8 +16,9 @@ repositories {
 
 dependencies {
   compileOnly group: 'io.papermc.paper', name: 'paper-api', version: '1.18.2-R0.1-SNAPSHOT'
+  implementation group: 'net.kyori', name: 'adventure-text-minimessage', version: '4.11.0'
 
-  implementation group: 'com.electronwill.night-config', name:'json', version: '3.6.5'
+  implementation group: 'com.electronwill.night-config', name:'json', version: '3.6.6'
   implementation group: 'com.sparkjava', name: 'spark-core', version: '2.9.4'
 }
 

@@ -2,6 +2,7 @@ package com.github.neapovil.oauth;
 
 import java.io.File;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -18,16 +19,17 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import spark.Spark;
 
 public final class OAuth extends JavaPlugin implements Listener
 {
     private static OAuth instance;
     private FileConfig config;
-    private String secret = "";
-    private final Map<String, Auth> codes = new ConcurrentHashMap<>();
+    private final Map<String, Auth> auths = new ConcurrentHashMap<>();
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    private int time = 60;
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     @Override
     public void onEnable()
@@ -37,12 +39,16 @@ public final class OAuth extends JavaPlugin implements Listener
         this.getServer().getPluginManager().registerEvents(this, this);
 
         this.getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
-            this.codes.values().removeIf(i -> Instant.now().isAfter(i.time));
+            this.auths.values().removeIf(i -> Instant.now().isAfter(i.time));
         }, 0, 20);
 
         this.saveResource("config.json", false);
 
-        this.config = FileConfig.builder(new File(this.getDataFolder(), "config.json")).build();
+        this.config = FileConfig.builder(new File(this.getDataFolder(), "config.json"))
+                .autoreload()
+                .autosave()
+                .concurrent()
+                .build();
 
         this.config.load();
 
@@ -52,28 +58,21 @@ public final class OAuth extends JavaPlugin implements Listener
             this.config.set("secret", secret);
         }
 
-        this.secret = this.config.get("secret");
-        this.time = this.config.getInt("time");
-
-        final int port = this.config.getInt("port");
-
-        Spark.port(port);
+        Spark.port(this.config.getInt("port"));
 
         Spark.before((req, res) -> {
             res.type("application/json");
 
             final String secret = req.headers("secret");
 
-            final ResponseError response = new ResponseError("");
-
             if (secret == null)
             {
-                Spark.halt(404, this.gson.toJson(response));
+                Spark.halt(401);
             }
 
-            if (!secret.equals(this.secret))
+            if (!secret.equals(this.getSecret()))
             {
-                Spark.halt(404, this.gson.toJson(response));
+                Spark.halt(401);
             }
 
             RequestBody data = null;
@@ -84,30 +83,29 @@ public final class OAuth extends JavaPlugin implements Listener
             }
             catch (Exception e)
             {
-                Spark.halt(400, this.gson.toJson(response));
+                Spark.halt(401);
             }
 
-            final Auth auth = this.codes.get(data.ip);
+            final Auth auth = this.auths.get(data.ip);
 
-            if (auth == null || data.code != auth.code || Instant.now().isAfter(auth.time))
+            if (auth == null || Instant.now().isAfter(auth.time))
             {
-                response.message = "INVALID CODE";
-                Spark.halt(400, this.gson.toJson(response));
+                Spark.halt(400);
             }
         });
 
-        Spark.get("/verify", "application/json", (req, res) -> {
+        Spark.post("/verify", "application/json", (req, res) -> {
             res.type("application/json");
 
             final RequestBody data = this.gson.fromJson(req.body(), RequestBody.class);
-            final Auth auth = this.codes.remove(data.ip);
+            final Auth auth = this.auths.remove(data.ip);
 
             if (auth == null)
             {
-                Spark.halt(400, this.gson.toJson(new ResponseError("EXPIRED")));
+                Spark.halt(400);
             }
 
-            final ResponseSuccess response = new ResponseSuccess(auth.username, auth.avatar);
+            final ResponseSuccess response = new ResponseSuccess(auth.username, auth.avatar, auth.id);
 
             return this.gson.toJson(response);
         });
@@ -139,55 +137,55 @@ public final class OAuth extends JavaPlugin implements Listener
                 .toString();
     }
 
-    private int generateCode()
-    {
-        final SecureRandom random = new SecureRandom();
-
-        return random.nextInt(100000, 1000000);
-    }
-
     @EventHandler
     private void asyncPlayerPreLogin(AsyncPlayerPreLoginEvent event)
     {
         final String ip = event.getAddress().getHostAddress();
         final UUID id = event.getUniqueId();
-        final Auth auth = this.codes.get(ip);
+        final Auth auth = this.auths.get(ip);
 
         if (auth == null || Instant.now().isAfter(auth.time))
         {
-            final int code = this.generateCode();
+            this.auths.put(ip, new Auth(Instant.now().plusSeconds(this.getTime()), ip, id, event.getName()));
 
-            this.codes.put(ip, new Auth(code, Instant.now().plusSeconds(this.time), ip, id, event.getName()));
+            final Component component = this.miniMessage.deserialize(this.getMessage(), Placeholder.unparsed("time", "" + this.getTime()));
 
-            event.disallow(Result.KICK_OTHER, Component.text(this.formatCode(code)));
+            event.disallow(Result.KICK_OTHER, component);
 
             return;
         }
 
-        event.disallow(Result.KICK_OTHER, Component.text(this.formatCode(auth.code)));
+        final Component component = this.miniMessage.deserialize(this.getMessage(),
+                Placeholder.unparsed("time", "" + Duration.between(Instant.now(), auth.time).toSeconds()));
+
+        event.disallow(Result.KICK_OTHER, component);
     }
 
-    private String formatCode(int s)
+    private String getSecret()
     {
-        final StringBuilder sb = new StringBuilder("" + s);
+        return this.config.get("secret");
+    }
 
-        sb.insert(3, " ");
+    private int getTime()
+    {
+        return this.config.getInt("time");
+    }
 
-        return sb.toString();
+    private String getMessage()
+    {
+        return this.config.get("message");
     }
 
     class Auth
     {
-        public final int code;
         public final Instant time;
         public final String address;
         public final UUID id;
         public final String username;
         public final String avatar;
 
-        public Auth(int code, Instant time, String address, UUID id, String username)
+        public Auth(Instant time, String address, UUID id, String username)
         {
-            this.code = code;
             this.time = time;
             this.address = address;
             this.id = id;
@@ -198,12 +196,10 @@ public final class OAuth extends JavaPlugin implements Listener
 
     class RequestBody
     {
-        public final int code;
         public final String ip;
 
-        public RequestBody(int code, String ip)
+        public RequestBody(String ip)
         {
-            this.code = code;
             this.ip = ip;
         }
     }
@@ -222,11 +218,13 @@ public final class OAuth extends JavaPlugin implements Listener
     {
         public String username;
         public String avatar;
+        public UUID id;
 
-        public ResponseSuccess(String username, String avatar)
+        public ResponseSuccess(String username, String avatar, UUID id)
         {
             this.username = username;
             this.avatar = avatar;
+            this.id = id;
         }
     }
 }
