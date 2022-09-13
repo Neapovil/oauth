@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Add Kyori MiniMessage support.
-- The config autoreload on save.
+- The config auto reloads on save.
 - The user no longer needs a code to authenticate.
 
 ## [1.0.0] - 2022-09-08

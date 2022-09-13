@@ -65,12 +65,7 @@ public final class OAuth extends JavaPlugin implements Listener
 
             final String secret = req.headers("secret");
 
-            if (secret == null)
-            {
-                Spark.halt(401);
-            }
-
-            if (!secret.equals(this.getSecret()))
+            if (secret == null || !secret.equals(this.getSecret()))
             {
                 Spark.halt(401);
             }
