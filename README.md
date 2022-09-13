@@ -2,7 +2,7 @@
 
 ## Supported Minecraft Versions
 
-1.18.2 is the only supported version at current time.
+1.18.2 is the only supported version for now.
 
 ## Install
 
@@ -11,16 +11,18 @@
 
 ## How to use
 
-The plugin uses Spark to create a REST API.
+The plugin uses [Spark](https://sparkjava.com/) to create a REST API.
 
-After the first run, the plugin will create a `config.json` file in `Plugins/OAuth/` with a secret code in it. If you want, you can modify it with a code of your choice.
+After the first run, the plugin will create a `config.json` file in `Plugins/OAuth/` with a secret code in it.
 
-The server uses this code to make sure the endpoints are used only from authorized sources.
+You are free to modify the secret code to your liking.
+
+The server uses this secret code to make sure the endpoints are used only from authorized sources.
 
 Spark will start the server on `0.0.0.0:4567`. You can change the port inside the `config.json` file.
 
-The player will be kicked out the server on log-in and a code is displayed.
+The player will be kicked out the server on log-in and a countdown is displayed.
 
-The code expires after 60 seconds (default). This value can be changed in the `config.json` file.
+The countdown expires after 60 seconds (default). This value can be changed in the `config.json` file.
 
-If you made changes to the config, make sure to restart the server to load the new values.
+The config auto reloads.
